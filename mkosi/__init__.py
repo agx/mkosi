@@ -2062,7 +2062,7 @@ def install_type1(
         if (
             not any(c.startswith("root=PARTUUID=") for c in context.config.kernel_command_line)
             and not any(c.startswith("mount.usr=PARTUUID=") for c in context.config.kernel_command_line)
-            and (root := finalize_root(partitions))
+            and (root := finalize_root(partitions, context.config.kernel_command_line))
         ):
             cmdline = [root] + cmdline
 
@@ -2112,7 +2112,7 @@ def finalize_bootloader_entry_format(
     bootloader_entry_format = context.config.unified_kernel_image_format or "&e-&k"
 
     roothash_value = ""
-    if roothash := finalize_roothash(partitions):
+    if roothash := finalize_roothash(partitions, context.config.kernel_command_line):
         roothash_value = roothash.partition("=")[2]
 
         if not context.config.unified_kernel_image_format:
@@ -2276,7 +2276,9 @@ def install_kernel(context: Context, partitions: Sequence[Partition]) -> None:
         die("A bootable image was requested but no kernel was found")
 
     token = find_entry_token(context)
-    cmdline = finalize_cmdline(context, partitions, finalize_roothash(partitions))
+    cmdline = finalize_cmdline(
+        context, partitions, finalize_roothash(partitions, context.config.kernel_command_line)
+    )
     profiles = build_uki_profiles(context, cmdline) if want_uki(context) else []
     # The first processed UKI is the one that will be used as split artifact, so take pcrs from
     # it and ignore the rest
@@ -3877,7 +3879,7 @@ def make_esp(
 
 def write_split_roothash(context: Context, partitions: Sequence[Partition]) -> None:
     if ArtifactOutput.roothash in context.config.split_artifacts and (
-        roothash := finalize_roothash(partitions)
+        roothash := finalize_roothash(partitions, context.config.kernel_command_line)
     ):
         (context.staging / context.config.output_split_roothash).write_text(roothash.partition("=")[2])
 

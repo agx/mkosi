@@ -48,7 +48,7 @@ def find_partitions(image: Path, *, sandbox: SandboxProtocol = nosandbox) -> lis
     return [Partition.from_dict(d) for d in output]
 
 
-def finalize_roothash(partitions: Sequence[Partition], cmdline: list[str]) -> Optional[str]:
+def finalize_roothash(config: Config, partitions: Sequence[Partition]) -> Optional[str]:
     roothash: Optional[str] = None
     usrhash: Optional[str] = None
 
@@ -69,19 +69,19 @@ def finalize_roothash(partitions: Sequence[Partition], cmdline: list[str]) -> Op
         else:
             roothash = roothash or h
 
-    if usrhash and "mount.usr=dissect" in cmdline:
+    if usrhash and "mount.usr=dissect" in config.kernel_command_line:
         logging.debug("dissect in use, omitting usrhash on kernel command line")
         return None
 
-    if roothash and "root=dissect" in cmdline:
+    if roothash and "root=dissect" in config.kernel_command_line:
         logging.debug("dissect in use, omitting roothash on kernel command line")
         return None
 
     return f"roothash={roothash}" if roothash else f"usrhash={usrhash}" if usrhash else None
 
 
-def finalize_root(partitions: Sequence[Partition], cmdline: list[str]) -> Optional[str]:
-    root = finalize_roothash(partitions, cmdline)
+def finalize_root(config: Config, partitions: Sequence[Partition]) -> Optional[str]:
+    root = finalize_roothash(Config, partitions)
     if not root:
         root = next((f"root=PARTUUID={p.uuid}" for p in partitions if p.type.startswith("root")), None)
     if not root:
